@@ -1,0 +1,9 @@
+BasedOnStyle: LLVM
+AllowShortFunctionsOnASingleLine: false
+SortIncludes: false
+BinPackParameters: true
+AlwaysBreakAfterReturnType: None
+InsertNewlineAtEOF: true
+KeepEmptyLinesAtEOF: true
+ColumnLimit: 120
+

@@ -1,0 +1,3 @@
+[submodule "ext/toolbelt"]
+	path = ext/toolbelt
+	url = https://github.com/seng3694/toolbelt.git
