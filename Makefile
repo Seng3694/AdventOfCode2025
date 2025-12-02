@@ -17,6 +17,11 @@ all: $(TARGETS)
 build/%: %/main.c %/input.txt | build
 	$(CC) $(CFLAGS) -MMD -MP $< -o $@ $(LDFLAGS)
 
+%/input.txt:
+	@DAY=$(notdir $(@D)); \
+	NUM=$$(echo $$DAY | sed -r 's/day0?//'); \
+	./get_aoc_input.sh $$NUM $(@D)
+
 $(DAYS): %: bin/%
 
 -include $(OBJS:.o=.d)
@@ -28,4 +33,5 @@ clean:
 	rm -rf build
 
 .PHONY: all clean $(DAYS)
+.PRECIOUS: %/input.txt
 
