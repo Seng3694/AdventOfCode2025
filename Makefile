@@ -22,7 +22,7 @@ build/%: %/main.c %/input.txt | build
 	NUM=$$(echo $$DAY | sed -r 's/day0?//'); \
 	./get_aoc_input.sh $$NUM $(@D)
 
-$(DAYS): %: bin/%
+$(DAYS): %: build/%
 
 -include $(OBJS:.o=.d)
 
