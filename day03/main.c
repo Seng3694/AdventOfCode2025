@@ -64,7 +64,7 @@ static uint64_t find_joltage(const power_bank *const b, uint8_t index, const uin
             goto next;
           }
         }
-        tlbt_assert_msg(false, "should never reach");
+        tlbt_assert_unreachable();
       }
     }
   next:;
@@ -103,7 +103,6 @@ int main(int argc, char **argv) {
 
   printf("%lu\n", part1);
   printf("%lu\n", part2);
-
   tlbt_arena_destroy(&a);
 }
 
