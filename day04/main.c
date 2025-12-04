@@ -75,15 +75,15 @@ typedef struct point {
 
 void get_movable_paper_rolls(const grid *const g, tlbt_deque_point *const rolls) {
   // no bounds checks required because of padding
+  const bool *d = g->data;
   const uint32_t row_offset = g->width + (GRID_PADDING * 2);
   for (register uint32_t y = 0; y < g->height; ++y) {
     const uint32_t base = (y + GRID_PADDING) * row_offset;
     for (uint32_t x = 0; x < g->width; ++x) {
       const uint32_t i = base + x + GRID_PADDING;
       if (g->data[i]) {
-        const uint32_t c = g->data[i - row_offset - 1] + g->data[i - row_offset] + g->data[i - row_offset + 1] +
-                           g->data[i - 1] + g->data[i + 1] + g->data[i + row_offset - 1] + g->data[i + row_offset] +
-                           g->data[i + row_offset + 1];
+        const uint32_t c = d[i - row_offset - 1] + d[i - row_offset] + d[i - row_offset + 1] + d[i - 1] +
+                           g->data[i + 1] + d[i + row_offset - 1] + d[i + row_offset] + d[i + row_offset + 1];
         if (c < 4) {
           tlbt_deque_point_push_back(rolls, (point){x, y});
         }
