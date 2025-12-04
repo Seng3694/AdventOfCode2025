@@ -9,19 +9,43 @@
 #define GRID_MAX_COLUMNS 137
 // wc -l day04/input.txt
 #define GRID_MAX_ROWS 137
+#define GRID_PADDING 1
 
 typedef struct grid {
-  // start with bool. if nothing else is required, change to bitset later
-  bool data[GRID_MAX_COLUMNS * GRID_MAX_ROWS];
+  // tried bitset and it was slower. still less than 20KB which fits nicely in my L1 cache
+  // inflate grid to avoid bounds checks
+  bool data[(GRID_MAX_COLUMNS + GRID_PADDING * 2) * (GRID_MAX_ROWS + GRID_PADDING * 2)];
   uint32_t width;
   uint32_t height;
 } grid;
+
+#define GRID_PADDED_INDEX(x, y, w) (((y) + GRID_PADDING) * ((w) + (GRID_PADDING * 2)) + ((x) + GRID_PADDING))
+
+static inline void grid_set(grid *const g, const uint32_t x, const uint32_t y) {
+  g->data[GRID_PADDED_INDEX(x, y, g->width)] = true;
+}
+
+static inline void grid_clear(grid *const g, const uint32_t x, const uint32_t y) {
+  g->data[GRID_PADDED_INDEX(x, y, g->width)] = false;
+}
+
+static inline bool grid_check(const grid *const g, const uint32_t x, const uint32_t y) {
+  return g->data[GRID_PADDED_INDEX(x, y, g->width)];
+}
 
 void parse_input(char *input, grid *const g) {
   uint32_t row = 0;
   uint32_t column = 0;
   g->width = 0;
   g->height = 0;
+
+  // find width first
+  char *start = input;
+  while (*input != '\n')
+    ++input;
+  g->width = input - start;
+  input = start;
+
   for (;;) {
     switch (*input) {
     case '\0':
@@ -29,24 +53,20 @@ void parse_input(char *input, grid *const g) {
       return;
     case '\n':
       ++input;
-      // last empty new line
-      if (column >= g->width) {
-        ++row;
-        g->width = column;
-      }
+      ++row;
       column = 0;
       break;
     case '.':
       tlbt_assert_msg(row < GRID_MAX_ROWS, "too many rows");
       tlbt_assert_msg(column < GRID_MAX_COLUMNS, "too many columns");
-      g->data[row * g->width + column] = false; // technically not necessary
+      grid_clear(g, column, row); // technically not necessary
       ++input;
       ++column;
       break;
     case '@':
       tlbt_assert_msg(row < GRID_MAX_ROWS, "too many rows");
       tlbt_assert_msg(column < GRID_MAX_COLUMNS, "too many columns");
-      g->data[row * g->width + column] = true;
+      grid_set(g, column, row);
       ++input;
       ++column;
       break;
@@ -69,63 +89,13 @@ typedef struct point {
 #include "../ext/toolbelt/src/deque.h"
 
 void get_movable_paper_rolls(const grid *const g, tlbt_deque_point *const rolls) {
-#define HAS_ROLL(x, y) (g->data[(y) * g->width + (x)])
-
-  // corners always have less than 4 spaces to worry about. so if they are a roll, then they are accessible
-  if (HAS_ROLL(0, 0)) // top left
-    tlbt_deque_point_push_back(rolls, (point){0, 0});
-
-  if (HAS_ROLL(g->width - 1, 0)) // top right
-    tlbt_deque_point_push_back(rolls, (point){g->width - 1, 0});
-
-  if (HAS_ROLL(0, g->height - 1)) // bottom left
-    tlbt_deque_point_push_back(rolls, (point){0, g->height - 1});
-
-  if (HAS_ROLL(g->width - 1, g->height - 1)) // bottom right
-    tlbt_deque_point_push_back(rolls, (point){g->width - 1, g->height - 1});
-
-  // top and bottom row
-  for (uint32_t x = 1; x < g->width - 1; ++x) {
-    // top row
-    if (HAS_ROLL(x, 0)) {
-      if ((HAS_ROLL(x - 1, 0) + HAS_ROLL(x + 1, 0) + HAS_ROLL(x - 1, 1) + +HAS_ROLL(x, 1) + +HAS_ROLL(x + 1, 1)) < 4) {
-        tlbt_deque_point_push_back(rolls, (point){x, 0});
-      }
-    }
-
-    // bottom row
-    if (HAS_ROLL(x, g->height - 1)) {
-      if ((HAS_ROLL(x - 1, g->height - 1) + HAS_ROLL(x + 1, g->height - 1) + HAS_ROLL(x - 1, g->height - 2) +
-           HAS_ROLL(x, g->height - 2) + +HAS_ROLL(x + 1, g->height - 2)) < 4) {
-        tlbt_deque_point_push_back(rolls, (point){x, g->height - 1});
-      }
-    }
-  }
-
-  // left and right column
-  for (uint32_t y = 1; y < g->height - 1; ++y) {
-    // left column
-    if (HAS_ROLL(0, y)) {
-      if ((HAS_ROLL(0, y - 1) + HAS_ROLL(0, y + 1) + HAS_ROLL(1, y - 1) + HAS_ROLL(1, y) + HAS_ROLL(1, y + 1)) < 4) {
-        tlbt_deque_point_push_back(rolls, (point){0, y});
-      }
-    }
-
-    // right column
-    if (HAS_ROLL(g->width - 1, y)) {
-      if ((HAS_ROLL(g->width - 1, y - 1) + HAS_ROLL(g->width - 1, y + 1) + HAS_ROLL(g->width - 2, y - 1) +
-           HAS_ROLL(g->width - 2, y) + HAS_ROLL(g->width - 2, y + 1)) < 4) {
-        tlbt_deque_point_push_back(rolls, (point){g->width - 1, y});
-      }
-    }
-  }
-
-  // now everything inside the frame. no bounds checking required
-  for (uint32_t y = 1; y < g->height - 1; ++y) {
-    for (uint32_t x = 1; x < g->width - 1; ++x) {
-      if (HAS_ROLL(x, y)) {
-        if ((HAS_ROLL(x - 1, y - 1) + HAS_ROLL(x, y - 1) + HAS_ROLL(x + 1, y - 1) + HAS_ROLL(x - 1, y) +
-             HAS_ROLL(x + 1, y) + HAS_ROLL(x - 1, y + 1) + HAS_ROLL(x, y + 1) + HAS_ROLL(x + 1, y + 1)) < 4) {
+  // no bounds checks required because of padding
+  for (uint32_t y = 0; y < g->height; ++y) {
+    for (uint32_t x = 0; x < g->width; ++x) {
+      if (grid_check(g, x, y)) {
+        if ((grid_check(g, x - 1, y - 1) + grid_check(g, x, y - 1) + grid_check(g, x + 1, y - 1) +
+             grid_check(g, x - 1, y) + grid_check(g, x + 1, y) + grid_check(g, x - 1, y + 1) + grid_check(g, x, y + 1) +
+             grid_check(g, x + 1, y + 1)) < 4) {
           tlbt_deque_point_push_back(rolls, (point){x, y});
         }
       }
@@ -146,7 +116,7 @@ void solve(grid *const g, tlbt_deque_point *const rolls, uint32_t *const part1, 
     p2 += rolls->count;
     tlbt_deque_iterator_point_reset(&iter);
     while (tlbt_deque_iterator_point_iterate(&iter, &p)) {
-      g->data[p.y * g->width + p.x] = false;
+      grid_clear(g, p.x, p.y);
     }
     tlbt_deque_point_clear(rolls);
     get_movable_paper_rolls(g, rolls);
