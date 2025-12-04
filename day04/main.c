@@ -21,30 +21,21 @@ typedef struct grid {
 
 #define GRID_PADDED_INDEX(x, y, w) (((y) + GRID_PADDING) * ((w) + (GRID_PADDING * 2)) + ((x) + GRID_PADDING))
 
-static inline void grid_set(grid *const g, const uint32_t x, const uint32_t y) {
-  g->data[GRID_PADDED_INDEX(x, y, g->width)] = true;
-}
-
 static inline void grid_clear(grid *const g, const uint32_t x, const uint32_t y) {
   g->data[GRID_PADDED_INDEX(x, y, g->width)] = false;
 }
 
-static inline bool grid_check(const grid *const g, const uint32_t x, const uint32_t y) {
-  return g->data[GRID_PADDED_INDEX(x, y, g->width)];
-}
-
 void parse_input(char *input, grid *const g) {
-  uint32_t row = 0;
-  uint32_t column = 0;
-  g->width = 0;
-  g->height = 0;
-
   // find width first
   char *start = input;
   while (*input != '\n')
     ++input;
   g->width = input - start;
   input = start;
+
+  uint32_t row = 0;
+  const uint32_t row_offset = g->width + (GRID_PADDING * 2);
+  uint32_t current = row_offset + GRID_PADDING;
 
   for (;;) {
     switch (*input) {
@@ -54,21 +45,15 @@ void parse_input(char *input, grid *const g) {
     case '\n':
       ++input;
       ++row;
-      column = 0;
+      current += GRID_PADDING * 2;
       break;
     case '.':
-      tlbt_assert_msg(row < GRID_MAX_ROWS, "too many rows");
-      tlbt_assert_msg(column < GRID_MAX_COLUMNS, "too many columns");
-      grid_clear(g, column, row); // technically not necessary
+      ++current;
       ++input;
-      ++column;
       break;
     case '@':
-      tlbt_assert_msg(row < GRID_MAX_ROWS, "too many rows");
-      tlbt_assert_msg(column < GRID_MAX_COLUMNS, "too many columns");
-      grid_set(g, column, row);
+      g->data[current++] = true;
       ++input;
-      ++column;
       break;
     default:
       tlbt_assert_fmt(false, "found invalid character '%c' (%d)", *input, *input);
@@ -90,12 +75,16 @@ typedef struct point {
 
 void get_movable_paper_rolls(const grid *const g, tlbt_deque_point *const rolls) {
   // no bounds checks required because of padding
-  for (uint32_t y = 0; y < g->height; ++y) {
+  const uint32_t row_offset = g->width + (GRID_PADDING * 2);
+  for (register uint32_t y = 0; y < g->height; ++y) {
+    const uint32_t base = (y + GRID_PADDING) * row_offset;
     for (uint32_t x = 0; x < g->width; ++x) {
-      if (grid_check(g, x, y)) {
-        if ((grid_check(g, x - 1, y - 1) + grid_check(g, x, y - 1) + grid_check(g, x + 1, y - 1) +
-             grid_check(g, x - 1, y) + grid_check(g, x + 1, y) + grid_check(g, x - 1, y + 1) + grid_check(g, x, y + 1) +
-             grid_check(g, x + 1, y + 1)) < 4) {
+      const uint32_t i = base + x + GRID_PADDING;
+      if (g->data[i]) {
+        const uint32_t c = g->data[i - row_offset - 1] + g->data[i - row_offset] + g->data[i - row_offset + 1] +
+                           g->data[i - 1] + g->data[i + 1] + g->data[i + row_offset - 1] + g->data[i + row_offset] +
+                           g->data[i + row_offset + 1];
+        if (c < 4) {
           tlbt_deque_point_push_back(rolls, (point){x, y});
         }
       }
@@ -145,6 +134,7 @@ int main(int argc, char **argv) {
 
   uint32_t part1, part2;
   solve(&g, &rolls, &part1, &part2);
+
   printf("%u\n", part1);
   printf("%u\n", part2);
 }
