@@ -111,7 +111,7 @@ static uint32_t merge_ranges(range *const ranges, uint32_t range_count) {
       merged++;
       // now i increases and this current range will be compared to the next one
     } else {
-      // can't merge so move current to i
+      // can't merge so move left to right
       left = right;
     }
   }
