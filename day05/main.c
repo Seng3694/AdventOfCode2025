@@ -77,7 +77,6 @@ void parse_input(char *input, range *const ranges, uint32_t *const range_count, 
     case '\0':
       *range_count = rc;
       *id_count = ic;
-      assert_sorted_ranges(ranges, rc);
       return;
     case '\n':
       ++input;
@@ -130,7 +129,6 @@ static uint32_t merge_ranges(range *const ranges, uint32_t range_count) {
     }
   }
 
-  assert_sorted_ranges(ranges, new_count);
   return new_count;
 }
 
@@ -151,6 +149,7 @@ static uint32_t solve_part1(const range *const ranges, const uint32_t range_coun
 }
 
 static uint64_t solve_part2(const range *const ranges, const uint32_t range_count) {
+  assert_sorted_ranges(ranges, range_count);
   uint64_t solution = 0;
 
   for (uint32_t i = 0; i < range_count; ++i)
