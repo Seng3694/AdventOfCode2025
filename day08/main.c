@@ -72,8 +72,8 @@ static inline bool point_equals(const point left, const point right) {
 #include "../ext/toolbelt/src/hashmap.h"
 
 typedef struct connection {
-  uint32_t a;
-  uint32_t b;
+  point a;
+  point b;
   uint32_t dist;
 } connection;
 
@@ -130,7 +130,6 @@ static int connect(const point a, const point b, tlbt_map_point_circuit *const m
 
 static void solve(const point *const points, const uint32_t point_count, const uint32_t connection_count,
                   uint32_t *const part1, uint64_t *const part2) {
-
   tlbt_map_point_circuit m = {0};
   tlbt_map_point_circuit_create(&m, 1024);
 
@@ -139,14 +138,11 @@ static void solve(const point *const points, const uint32_t point_count, const u
   tlbt_min_heap_connection connections = {0};
   tlbt_min_heap_connection_create(&connections, 500000);
 
-  // TODO: this is the main bottleneck
-  // should create an octree or kd-tree for faster spatial querying of close neighbors instead of bruteforcing. this
-  // also requires way more memory
   for (uint32_t i = 0; i < point_count - 1; ++i) {
     const point a = points[i];
     for (uint32_t j = i + 1; j < point_count; ++j) {
       const point b = points[j];
-      tlbt_min_heap_connection_push(&connections, (connection){.a = i, .b = j, .dist = point_distance(a, b)});
+      tlbt_min_heap_connection_push(&connections, (connection){.a = a, .b = b, .dist = point_distance(a, b)});
     }
   }
 
@@ -154,7 +150,7 @@ static void solve(const point *const points, const uint32_t point_count, const u
   for (uint32_t i = 0; i < connection_count; ++i) {
     connection c = {0};
     tlbt_min_heap_connection_peek(&connections, &c);
-    circuit_count += connect(points[c.a], points[c.b], &m, &next_circuit_id);
+    circuit_count += connect(c.a, c.b, &m, &next_circuit_id);
     tlbt_min_heap_connection_pop(&connections);
   }
 
@@ -180,11 +176,11 @@ static void solve(const point *const points, const uint32_t point_count, const u
   connection last_connection = {0};
   for (uint32_t i = connection_count; i < connections.count && (circuit_count != 1 || m.count != point_count); ++i) {
     tlbt_min_heap_connection_peek(&connections, &last_connection);
-    circuit_count += connect(points[last_connection.a], points[last_connection.b], &m, &next_circuit_id);
+    circuit_count += connect(last_connection.a, last_connection.b, &m, &next_circuit_id);
     tlbt_min_heap_connection_pop(&connections);
   }
 
-  *part2 = (uint64_t)points[last_connection.a].x * (uint64_t)points[last_connection.b].x;
+  *part2 = (uint64_t)last_connection.a.x * (uint64_t)last_connection.b.x;
 
   tlbt_min_heap_connection_destroy(&connections);
   tlbt_map_point_circuit_destroy(&m);
